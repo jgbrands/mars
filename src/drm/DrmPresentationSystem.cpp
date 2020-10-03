@@ -5,10 +5,10 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 
-#include <mars/drm/DrmPresentationBackend.hpp>
+#include <mars/drm/DrmPresentationSystem.hpp>
 #include <mars/drm/DrmDeviceResources.hpp>
 
-mars::DrmPresentationBackend::DrmPresentationBackend(const std::string& devicePath)
+mars::DrmPresentationSystem::DrmPresentationSystem(const std::string& devicePath)
 		: device(devicePath)
 {
 	if (!device.set_capability(DRM_CLIENT_CAP_ATOMIC, true)) {
@@ -62,7 +62,7 @@ mars::DrmPresentationBackend::DrmPresentationBackend(const std::string& devicePa
 	}
 }
 
-void mars::DrmPresentationBackend::poll_events()
+void mars::DrmPresentationSystem::poll_events()
 {
 	drmEventContext ev = {};
 	ev.version = DRM_EVENT_CONTEXT_VERSION;
@@ -93,9 +93,9 @@ void mars::DrmPresentationBackend::poll_events()
 }
 
 void
-mars::DrmPresentationBackend::page_flip_handler(int fd, uint32_t seq, uint32_t s, uint32_t us, uint32_t vdc, void* ptr)
+mars::DrmPresentationSystem::page_flip_handler(int fd, uint32_t seq, uint32_t s, uint32_t us, uint32_t vdc, void* ptr)
 {
-	auto* self = static_cast<DrmPresentationBackend*>(ptr);
+	auto* self = static_cast<DrmPresentationSystem*>(ptr);
 
 	mars::DrmAtomicRequest request(self->device, self);
 

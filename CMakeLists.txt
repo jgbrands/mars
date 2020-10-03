@@ -1,11 +1,15 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.14)
 project(mars
         VERSION 0.1.0
         LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+find_package(udev REQUIRED)
 find_package(drm REQUIRED)
+find_package(systemd REQUIRED)
+find_package(sdbus-c++ REQUIRED)
+find_package(Libinput REQUIRED)
 
 set(MARS_SOURCES
         src/main.cpp
@@ -17,8 +21,8 @@ set(MARS_SOURCES
         src/drm/DrmSwapchain.cpp
         src/drm/DrmDumbBuffer.cpp
         src/drm/DrmVideoDisplayController.cpp
-        src/drm/DrmPresentationBackend.cpp
-        src/drm/DrmAtomicRequest.cpp)
+        src/drm/DrmPresentationSystem.cpp
+        src/drm/DrmAtomicRequest.cpp src/session/LogindSession.cpp)
 
 set(MARS_HEADERS
         include/mars/drm/DrmConnector.hpp
@@ -30,12 +34,12 @@ set(MARS_HEADERS
         include/mars/drm/DrmSwapchain.hpp
         include/mars/drm/DrmDumbBuffer.hpp
         include/mars/drm/DrmPropertyBlob.hpp
-        include/mars/drm/DrmPresentationBackend.hpp
+        include/mars/drm/DrmPresentationSystem.hpp
         include/mars/drm/DrmPlaneResources.hpp
         include/mars/drm/DrmPlane.hpp
         include/mars/drm/DrmResourcePtr.hpp
         include/mars/drm/DrmObjectProperties.hpp
-        include/mars/drm/DrmAtomicRequest.hpp)
+        include/mars/drm/DrmAtomicRequest.hpp include/mars/session/LogindSession.hpp)
 
 add_executable(mars
         ${MARS_SOURCES}
@@ -44,9 +48,16 @@ add_executable(mars
 target_compile_features(mars
         PRIVATE cxx_std_17)
 
+target_compile_options(mars
+        PRIVATE -D_GLIBCXX_DEBUG)
+
 target_include_directories(mars
         PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(mars
-        PUBLIC drm::drm)
+        PRIVATE SDBusCpp::sdbus-c++
+        PRIVATE systemd::systemd
+        PRIVATE udev::udev
+        PRIVATE drm::drm
+        PRIVATE Libinput::Libinput)

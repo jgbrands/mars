@@ -12,11 +12,11 @@
 namespace mars
 {
 	/**
-	 * The DrmPresentationBackend class wraps one or more frame buffers and handles the creation of them, setting them up with
+	 * The DrmPresentationSystem class wraps one or more frame buffers and handles the creation of them, setting them up with
 	 * correct properties and handling swapping between them. Essentially, this is the structure we will deal with the
 	 * most out of the DRM layer and is a direct implementation of mars::IPresenter.
 	 */
-	class DrmPresentationBackend
+	class DrmPresentationSystem
 	{
 		DrmDevice device;
 		std::vector<mars::DrmSwapchain> swapchains;
@@ -24,7 +24,7 @@ namespace mars
 		static void page_flip_handler(int fd, uint32_t seq, uint32_t s, uint32_t us, uint32_t vdc, void* ptr);
 
 	public:
-		explicit DrmPresentationBackend(const std::string& devicePath);
+		explicit DrmPresentationSystem(const std::string& devicePath);
 
 		void poll_events();
 	};
