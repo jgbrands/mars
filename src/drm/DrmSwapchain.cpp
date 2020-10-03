@@ -2,12 +2,12 @@
 // Created by Jesse on 9/27/2020.
 //
 
-#include <mars/drm/DrmSurface.hpp>
+#include <mars/drm/DrmSwapchain.hpp>
 #include <mars/drm/DrmDeviceResources.hpp>
 #include <mars/drm/DrmPlaneResources.hpp>
 
-mars::DrmSurface::DrmSurface(DrmDevice& device, DrmConnector& connector, DrmEncoder& encoder, drmModeModeInfo mode)
-		: device(device), encoder(encoder), connector(connector), modeInfo(mode),
+mars::DrmSwapchain::DrmSwapchain(DrmDevice& device, DrmConnector&& conn, DrmEncoder&& enc, drmModeModeInfo mode)
+		: device(device), encoder(std::move(enc)), connector(std::move(conn)), modeInfo(mode),
 		  modeBlob(device, &modeInfo),
 		  initialVdc(device, encoder.get_default_vdc().get_id())
 {
@@ -41,23 +41,9 @@ mars::DrmSurface::DrmSurface(DrmDevice& device, DrmConnector& connector, DrmEnco
 	for (int i = 0; i < 2; i++) {
 		buffers.emplace_back(device, mode);
 	}
-
-	// Finally, perform the modeset
-	mars::DrmUniqueAtomicRequestPtr req(drmModeAtomicAlloc());
-	prepare(req.get());
-
-	if (drmModeAtomicCommit(device.get_fd(), req.get(),
-	                        DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET, nullptr) < 0) {
-		throw std::runtime_error("test-only atomic commit failed");
-	}
-
-	if (drmModeAtomicCommit(device.get_fd(), req.get(),
-	                        DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT, nullptr) < 0) {
-		throw std::runtime_error("mode setting failed");
-	}
 }
 
-mars::DrmSurface::~DrmSurface()
+mars::DrmSwapchain::~DrmSwapchain()
 {
 	// Restore the default CRTC so that we do not lock the system
 	drmModeSetCrtc(device.get_fd(),
@@ -70,15 +56,13 @@ mars::DrmSurface::~DrmSurface()
 	               &initialVdc->mode);
 }
 
-void mars::DrmSurface::prepare(drmModeAtomicReq* req)
+void mars::DrmSwapchain::modeset(DrmAtomicRequest& req)
 {
 	DrmVideoDisplayController vdc = encoder.get_default_vdc();
+	auto& fb = get_current_frame_buffer();
 	connector.set_property(req, "CRTC_ID", vdc.get_id());
 	vdc.set_property(req, "MODE_ID", modeBlob.get_id());
 	vdc.set_property(req, "ACTIVE", 1);
-	// Grab the currently active framebuffer
-	auto& fb = get_current_frame_buffer();
-	// Set primary plane properties
 	primaryPlane->set_property(req, "FB_ID", fb.get_id());
 	primaryPlane->set_property(req, "CRTC_ID", vdc.get_id());
 	primaryPlane->set_property(req, "SRC_X", 0);
@@ -91,12 +75,12 @@ void mars::DrmSurface::prepare(drmModeAtomicReq* req)
 	primaryPlane->set_property(req, "CRTC_H", fb.get_buffer().get_height());
 }
 
-void mars::DrmSurface::swap_buffers()
+void mars::DrmSwapchain::swap_buffers()
 {
 	frame++;
 }
 
-mars::DrmFrameBuffer& mars::DrmSurface::get_current_frame_buffer()
+mars::DrmFrameBuffer& mars::DrmSwapchain::get_current_frame_buffer()
 {
 	return buffers[frame % buffers.size()];
 }

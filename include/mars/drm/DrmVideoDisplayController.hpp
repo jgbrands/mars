@@ -63,7 +63,7 @@ namespace mars
 			return DrmObjectProperties(device, crtc->crtc_id, DRM_MODE_OBJECT_CRTC);
 		}
 
-		void set_property(drmModeAtomicReq* req, const std::string& name, uint64_t value)
+		void set_property(DrmAtomicRequest& req, const std::string& name, uint64_t value)
 		{
 			DrmObjectProperties(device, crtc->crtc_id, DRM_MODE_OBJECT_CRTC)
 					.set_value(name, value, req);

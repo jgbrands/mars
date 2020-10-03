@@ -16,6 +16,7 @@ namespace mars
 		DrmDevice& device;
 		DrmDumbBuffer buffer;
 		uint32_t handle;
+		uint64_t frame;
 
 	public:
 		DrmFrameBuffer(DrmDevice& device, drmModeModeInfo mode);

@@ -26,6 +26,8 @@ namespace mars
 		int fd;
 		std::string devicePath;
 
+		static void page_flip_handler(int fd, uint32_t seq, uint32_t sec, uint32_t usec, uint32_t vdc, void* ptr);
+
 	public:
 		explicit DrmDevice(std::string path = "/dev/dri/card0");
 
@@ -52,5 +54,7 @@ namespace mars
 		{
 			return fd;
 		}
+
+		void poll_events();
 	};
 }

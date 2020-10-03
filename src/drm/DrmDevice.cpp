@@ -10,6 +10,7 @@
 #include <xf86drmMode.h>
 
 #include <mars/drm/DrmDevice.hpp>
+#include <iostream>
 
 mars::DrmDevice::DrmDevice(std::string path)
 		: fd(open(path.c_str(), O_RDWR | O_CLOEXEC)),
@@ -56,4 +57,33 @@ mars::DrmDeviceCapabilities mars::DrmDevice::get_capabilities() const
 bool mars::DrmDevice::set_capability(uint64_t capability, uint64_t value)
 {
 	return !drmSetClientCap(fd, capability, value);
+}
+
+void mars::DrmDevice::poll_events()
+{
+	fd_set fds;
+	FD_ZERO(&fds);
+
+	timeval tv = {};
+	drmEventContext ev = {};
+	ev.version = 4;
+	ev.page_flip_handler2 = page_flip_handler;
+
+	FD_SET(0, &fds);
+	FD_SET(fd, &fds);
+
+	tv.tv_usec = 1000000/60;
+	auto ret = select(fd + 1, &fds, nullptr, nullptr, &tv);
+	if (ret < 0) {
+		throw std::runtime_error("select failed");
+	} else if (FD_ISSET(0, &fds)) {
+		std::cout << "user input" << std::endl;
+	} else if (FD_ISSET(fd, &fds)) {
+		drmHandleEvent(fd, &ev);
+	}
+}
+
+void mars::DrmDevice::page_flip_handler(int fd, uint32_t seq, uint32_t sec, uint32_t usec, uint32_t vdc, void* ptr)
+{
+	std::cout << "page flip time!!" << std::endl;
 }

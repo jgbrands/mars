@@ -38,7 +38,7 @@ namespace mars
 			return DrmObjectProperties(device, plane->plane_id, DRM_MODE_OBJECT_PLANE);
 		}
 
-		void set_property(drmModeAtomicReq* req, const std::string& name, uint64_t value)
+		void set_property(DrmAtomicRequest& req, const std::string& name, uint64_t value)
 		{
 			DrmObjectProperties(device, plane->plane_id, DRM_MODE_OBJECT_PLANE)
 					.set_value(name, value, req);

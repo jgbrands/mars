@@ -12,6 +12,7 @@
 #include <mars/drm/DrmDevice.hpp>
 #include <mars/drm/DrmResourcePtr.hpp>
 #include <iostream>
+#include "DrmAtomicRequest.hpp"
 
 namespace mars
 {
@@ -57,12 +58,12 @@ namespace mars
 			return -1;
 		}
 
-		void set_value(const std::string& name, uint64_t value, drmModeAtomicReq* req)
+		void set_value(const std::string& name, uint64_t value, DrmAtomicRequest& req)
 		{
 			for (int i = 0; i < properties->count_props; ++i) {
 				auto prop = get(properties->props[i]);
 				if (name == prop->name) {
-					if (drmModeAtomicAddProperty(req, objectId, prop->prop_id, value) < 0) {
+					if (drmModeAtomicAddProperty(req.get(), objectId, prop->prop_id, value) < 0) {
 						throw std::runtime_error("failed to set property on object");
 					}
 					return;

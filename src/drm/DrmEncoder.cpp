@@ -13,7 +13,9 @@ mars::DrmEncoder::DrmEncoder(mars::DrmDevice& device, uint32_t encoderId)
 		  encoderId(encoderId),
 		  encoder(drmModeGetEncoder(device.get_fd(), encoderId))
 {
-	// Do not throw on nullptr, a null encoder is defined behaviour.
+	if (encoder == nullptr) {
+		throw std::runtime_error("could not get encoder");
+	}
 }
 
 bool mars::DrmEncoder::compatible_with_vdc(const mars::DrmVideoDisplayController& vdc) const noexcept

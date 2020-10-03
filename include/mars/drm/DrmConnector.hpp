@@ -59,7 +59,7 @@ namespace mars
 			return DrmObjectProperties(device, connector->connector_id, DRM_MODE_OBJECT_CONNECTOR);
 		}
 
-		void set_property(drmModeAtomicReq* req, const std::string& name, uint64_t value)
+		void set_property(DrmAtomicRequest& req, const std::string& name, uint64_t value)
 		{
 			DrmObjectProperties(device, connector->connector_id, DRM_MODE_OBJECT_CONNECTOR)
 					.set_value(name, value, req);
