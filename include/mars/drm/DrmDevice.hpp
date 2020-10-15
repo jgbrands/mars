@@ -18,6 +18,9 @@
 
 #include <string>
 #include <set>
+#include <memory>
+
+#include <mars/Log.hpp>
 
 namespace mars
 {
@@ -35,13 +38,14 @@ namespace mars
 
 	class DrmDevice
 	{
-		int fd;
-		std::string devicePath;
+		int m_fd;
+		std::string m_devicePath;
+		std::shared_ptr<Log> m_log;
 
 		static void page_flip_handler(int fd, uint32_t seq, uint32_t sec, uint32_t usec, uint32_t vdc, void* ptr);
 
 	public:
-		explicit DrmDevice(std::string path = "/dev/dri/card0");
+		explicit DrmDevice(std::shared_ptr<Log> log, std::string path);
 
 		~DrmDevice();
 
@@ -49,9 +53,9 @@ namespace mars
 
 		DrmDevice(DrmDevice&& other) noexcept
 		{
-			fd = other.fd;
-			other.fd = -1;
-			devicePath = std::move(other.devicePath);
+			m_fd = other.m_fd;
+			other.m_fd = -1;
+			m_devicePath = std::move(other.m_devicePath);
 		}
 
 		DrmDevice& operator=(const DrmDevice& rhs) = delete;
@@ -64,9 +68,14 @@ namespace mars
 
 		[[nodiscard]] int get_fd() const
 		{
-			return fd;
+			return m_fd;
 		}
 
 		void poll_events();
+
+		[[nodiscard]] std::shared_ptr<Log> log() const
+		{
+			return m_log;
+		}
 	};
 }

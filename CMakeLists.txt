@@ -10,6 +10,8 @@ find_package(drm REQUIRED)
 find_package(systemd REQUIRED)
 find_package(sdbus-c++ REQUIRED)
 find_package(Libinput REQUIRED)
+find_package(date REQUIRED)
+find_package(fmt REQUIRED)
 
 set(MARS_SOURCES
         src/main.cpp
@@ -22,7 +24,9 @@ set(MARS_SOURCES
         src/drm/DrmDumbBuffer.cpp
         src/drm/DrmVideoDisplayController.cpp
         src/drm/DrmPresentationSystem.cpp
-        src/drm/DrmAtomicRequest.cpp src/session/LogindSession.cpp)
+        src/drm/DrmAtomicRequest.cpp
+        src/session/LogindSession.cpp
+        src/Log.cpp)
 
 set(MARS_HEADERS
         include/mars/drm/DrmConnector.hpp
@@ -39,14 +43,16 @@ set(MARS_HEADERS
         include/mars/drm/DrmPlane.hpp
         include/mars/drm/DrmResourcePtr.hpp
         include/mars/drm/DrmObjectProperties.hpp
-        include/mars/drm/DrmAtomicRequest.hpp include/mars/session/LogindSession.hpp)
+        include/mars/drm/DrmAtomicRequest.hpp
+        include/mars/session/LogindSession.hpp
+        include/mars/Log.hpp)
 
 add_executable(mars
         ${MARS_SOURCES}
         ${MARS_HEADERS})
 
 target_compile_features(mars
-        PRIVATE cxx_std_17)
+        PRIVATE cxx_std_20)
 
 target_compile_options(mars
         PRIVATE -D_GLIBCXX_DEBUG)
@@ -57,6 +63,8 @@ target_include_directories(mars
 
 target_link_libraries(mars
         PRIVATE SDBusCpp::sdbus-c++
+        PRIVATE date::date
+        PRIVATE fmt::fmt
         PRIVATE systemd::systemd
         PRIVATE udev::udev
         PRIVATE drm::drm

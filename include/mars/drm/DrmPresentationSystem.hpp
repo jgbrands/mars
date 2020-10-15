@@ -30,13 +30,14 @@ namespace mars
 	 */
 	class DrmPresentationSystem
 	{
-		DrmDevice device;
-		std::vector<mars::DrmSwapchain> swapchains;
+		DrmDevice m_device;
+		std::shared_ptr<mars::Log> m_log;
+		std::vector<mars::DrmSwapchain> m_swapchains;
 
 		static void page_flip_handler(int fd, uint32_t seq, uint32_t s, uint32_t us, uint32_t vdc, void* ptr);
 
 	public:
-		explicit DrmPresentationSystem(const std::string& devicePath);
+		explicit DrmPresentationSystem(std::shared_ptr<mars::Log> log, const std::string& devicePath);
 
 		void poll_events();
 	};

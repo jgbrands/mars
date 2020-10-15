@@ -19,20 +19,33 @@
 #include <string>
 
 #include <sdbus-c++/sdbus-c++.h>
+#include <mars/Log.hpp>
 
 namespace mars
 {
 	class LogindSession
 	{
-		std::unique_ptr<sdbus::IProxy> managerProxy;
-		std::unique_ptr<sdbus::IProxy> sessionProxy;
-		std::unique_ptr<sdbus::IProxy> seatProxy;
-		std::unique_ptr<sdbus::IProxy> userProxy;
+		std::shared_ptr<Log> m_log;
+		std::string m_sessionId;
+		std::string m_seatId;
+		std::string m_username;
+
+		std::unique_ptr<sdbus::IProxy> m_managerProxy;
+		std::unique_ptr<sdbus::IProxy> m_sessionProxy;
+		std::unique_ptr<sdbus::IProxy> m_seatProxy;
+		std::unique_ptr<sdbus::IProxy> m_userProxy;
 
 	public:
-		explicit LogindSession(const std::string& sessionId = get_display_session());
+		explicit LogindSession(std::shared_ptr<Log> log, const std::string& sessionId = get_display_session());
+
+		void activate();
+
+		void take_control(bool force = false);
+
+		int take_device(std::string_view devicePath);
+
+		void release_device(int fd);
 
 		static std::string get_display_session();
-
 	};
 }

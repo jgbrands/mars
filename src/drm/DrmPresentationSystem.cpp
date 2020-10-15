@@ -19,16 +19,18 @@
 
 #include <mars/drm/DrmPresentationSystem.hpp>
 #include <mars/drm/DrmDeviceResources.hpp>
+#include <utility>
 
-mars::DrmPresentationSystem::DrmPresentationSystem(const std::string& devicePath)
-		: device(devicePath)
+mars::DrmPresentationSystem::DrmPresentationSystem(std::shared_ptr<Log> log, const std::string& devicePath)
+		: m_device(log, devicePath),
+		  m_log(std::move(log))
 {
-	if (!device.set_capability(DRM_CLIENT_CAP_ATOMIC, true)) {
+	if (!m_device.set_capability(DRM_CLIENT_CAP_ATOMIC, true)) {
 		throw std::runtime_error("device does not support atomic API");
 	}
 
 	// Query device capabilities to see if it supports what we need
-	auto capabilities = device.get_capabilities();
+	auto capabilities = m_device.get_capabilities();
 	if (!capabilities.dumbBuffers) {
 		throw std::runtime_error("device does not support basic buffers");
 	}
@@ -38,7 +40,7 @@ mars::DrmPresentationSystem::DrmPresentationSystem(const std::string& devicePath
 
 	// Create swap chains for each connected device.
 	// TODO: Implement support for new monitors being attached
-	mars::DrmDeviceResources resources(device);
+	mars::DrmDeviceResources resources(m_device);
 	for (auto& connector: resources.get_connectors()) {
 		if (connector->connection != DRM_MODE_CONNECTED) {
 			continue;
@@ -48,20 +50,18 @@ mars::DrmPresentationSystem::DrmPresentationSystem(const std::string& devicePath
 		auto encoder = connector.get_current_encoder();
 		auto mode = connector.preferred_video_mode();
 		if (!encoder.is_available()) {
-			std::cerr << "DRM device connector has no available encoder" << std::endl;
 			continue;
 		}
 
-		swapchains.emplace_back(device, std::move(connector), std::move(encoder), mode);
+		m_log->send("Creating swapchain on display with video mode {}x{}@{}Hz", mode.hdisplay, mode.vdisplay,
+		            mode.vrefresh);
+		m_swapchains.emplace_back(m_device, std::move(connector), std::move(encoder), mode);
 	}
 
-	// Create an epoll structure to poll events later
-
-
 	// Last but not least, modeset our device.
-	mars::DrmAtomicRequest request(device, this);
+	mars::DrmAtomicRequest request(m_device, this);
 
-	for (auto& swapchain: swapchains) {
+	for (auto& swapchain: m_swapchains) {
 		swapchain.modeset(request);
 	}
 
@@ -88,17 +88,17 @@ void mars::DrmPresentationSystem::poll_events()
 
 	epoll_event event = {};
 	event.events = EPOLLIN;
-	event.data.fd = device.get_fd();
+	event.data.fd = m_device.get_fd();
 
-	if (epoll_ctl(epollFd, EPOLL_CTL_ADD, device.get_fd(), &event)) {
+	if (epoll_ctl(epollFd, EPOLL_CTL_ADD, m_device.get_fd(), &event)) {
 		std::cerr << "failed to add file descriptor to epoll" << std::endl;
 		close(epollFd);
 		return;
 	}
 
 	auto count = epoll_wait(epollFd, &event, 1, 0);
-	if (count > 0 && event.data.fd == device.get_fd()) {
-		drmHandleEvent(device.get_fd(), &ev);
+	if (count > 0 && event.data.fd == m_device.get_fd()) {
+		drmHandleEvent(m_device.get_fd(), &ev);
 	}
 
 	close(epollFd);
@@ -109,9 +109,9 @@ mars::DrmPresentationSystem::page_flip_handler(int fd, uint32_t seq, uint32_t s,
 {
 	auto* self = static_cast<DrmPresentationSystem*>(ptr);
 
-	mars::DrmAtomicRequest request(self->device, self);
+	mars::DrmAtomicRequest request(self->m_device, self);
 
-	for (auto& swapchain: self->swapchains) {
+	for (auto& swapchain: self->m_swapchains) {
 		swapchain.swap_buffers();
 
 		// Get the frame buffer and draw to it

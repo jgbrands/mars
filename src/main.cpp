@@ -17,19 +17,37 @@
 #include <iostream>
 #include <cstdlib>
 
-#include <libinput.h>
 #include <systemd/sd-daemon.h>
-#include <zconf.h>
-#include <sdbus-c++/sdbus-c++.h>
+#include <unistd.h>
 
-#include <mars/session/LogindSession.hpp>
 #include <mars/drm/DrmPresentationSystem.hpp>
+#include <mars/session/LogindSession.hpp>
+#include <mars/Log.hpp>
+#include <libudev.h>
 
 int main()
 {
-	if (geteuid() == 0) {
-		std::cerr << "mars: cannot be run as root" << std::endl;
-		return EXIT_FAILURE;
+	auto* udev = udev_new();
+	auto* udevEnum = udev_enumerate_new(udev);
+	udev_enumerate_add_match_subsystem(udevEnum, "drm");
+	udev_enumerate_add_match_property(udevEnum, "DEVTYPE", "drm_minor");
+	udev_enumerate_scan_devices(udevEnum);
+
+	auto* devices = udev_enumerate_get_list_entry(udevEnum);
+	struct udev_list_entry* entry = nullptr;
+
+	udev_list_entry_foreach(entry, devices) {
+		const char* path = udev_list_entry_get_name(entry);
+		auto* device = udev_device_new_from_device_id(udev, path);
+
+		auto* devNode = udev_device_get_devnode(device);
+		std::cout << path;
+
+		if (devNode) {
+			std::cout << ": " << devNode << std::endl;
+		} else {
+			std::cout << std::endl;
+		}
 	}
 
 	if (!sd_booted()) {
@@ -37,16 +55,23 @@ int main()
 		return EXIT_FAILURE;
 	}
 
-	mars::LogindSession session;
+	if (geteuid() == 0) {
+		std::cerr << "mars: cannot be run as root" << std::endl;
+		return EXIT_FAILURE;
+	}
+
+	auto log = std::make_shared<mars::Log>("mars", true);
 
 	try {
+		mars::LogindSession session(log);
+
 		// Open up the DRM device and check capabilities
-		mars::DrmPresentationSystem presentationSystem("/dev/dri/card0");
+		mars::DrmPresentationSystem presentationSystem(log, "/dev/dri/card0");
 		for (int i = 0; i < 1; i++) {
 			presentationSystem.poll_events();
 		}
 	} catch (std::exception& e) {
-		std::cerr << "mars has encountered an unexpected error: " << e.what() << std::endl;
+		log->error(e);
 		return EXIT_FAILURE;
 	}
 
